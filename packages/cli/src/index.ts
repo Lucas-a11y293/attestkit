@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import process from "node:process";
 import {
   POLICY_SCHEMA_VERSION,
+  compareReceipts,
   createReceipt,
   evaluatePolicy,
   mergeRedactionCounts,
@@ -13,6 +14,7 @@ import {
   verifyReceipt,
   type ArtifactEvidence,
   type Receipt,
+  type ReceiptComparisonReport,
   type ReceiptPolicy,
 } from "@attestkit/core";
 import { EXIT } from "./exit-codes.js";
@@ -45,7 +47,7 @@ interface CaptureConfig {
   redaction?: { environmentAllowlist?: string[] };
 }
 function usage(): string {
-  return `AttestKit 0.1.0\n\nUsage:\n  attestkit capture [--out receipt.json] [--workspace .] [--artifact path] [--allow-env KEY] -- <command> [args]\n  attestkit inspect <receipt.json> [--format text|json|markdown]\n  attestkit verify <receipt.json> [--workspace .] [--format text|json]\n  attestkit policy check <receipt.json> --policy policy.json [--format text|json]\n\nAttestKit records bounded evidence. It never runs a shell and verify never replays a command.`;
+  return `AttestKit 0.2.0-rc.1\n\nUsage:\n  attestkit capture [--out receipt.json] [--workspace .] [--artifact path] [--allow-env KEY] -- <command> [args]\n  attestkit inspect <receipt.json> [--format text|json|markdown]\n  attestkit verify <receipt.json> [--workspace .] [--format text|json]\n  attestkit compare <baseline.json> <current.json> [--format text|json|markdown]\n  attestkit policy check <receipt.json> --policy policy.json [--format text|json]\n\nAttestKit records bounded evidence. It never runs a shell and verify never replays a command.`;
 }
 function isReceipt(value: unknown): value is Receipt {
   return (
@@ -56,7 +58,31 @@ function isReceipt(value: unknown): value is Receipt {
     "integrity" in value
   );
 }
+function isComparisonReport(value: unknown): value is ReceiptComparisonReport {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "reportVersion" in value &&
+    value.reportVersion === "attestkit-comparison/v1"
+  );
+}
+function renderComparisonText(report: ReceiptComparisonReport): string {
+  return [
+    "AttestKit comparison",
+    `Identical: ${report.identical}`,
+    `Status: ${report.status.baseline} -> ${report.status.current}${report.status.changed ? " (changed)" : ""}`,
+    `Command changed: ${report.command.changed}`,
+    `Source changed: ${report.source.changed}`,
+    `Artifacts: +${report.artifacts.added.length} -${report.artifacts.removed.length} ~${report.artifacts.changed.length} =${report.artifacts.unchanged.length}`,
+    `Warnings changed: ${report.warnings.changed}`,
+    `Boundary: ${report.verificationBoundary}`,
+  ].join("\n");
+}
+function renderComparisonMarkdown(report: ReceiptComparisonReport): string {
+  return `# AttestKit comparison\n\n| Field | Result |\n|---|---|\n| Identical | \`${report.identical}\` |\n| Status | \`${report.status.baseline}\` → \`${report.status.current}\` |\n| Command changed | \`${report.command.changed}\` |\n| Source changed | \`${report.source.changed}\` |\n| Artifacts | +${report.artifacts.added.length} / -${report.artifacts.removed.length} / ~${report.artifacts.changed.length} / =${report.artifacts.unchanged.length} |\n| Warnings changed | \`${report.warnings.changed}\` |\n\n> ${report.verificationBoundary}\n`;
+}
 function renderText(value: unknown): string {
+  if (isComparisonReport(value)) return renderComparisonText(value);
   if (isReceipt(value))
     return [
       "AttestKit receipt",
@@ -75,6 +101,8 @@ function renderMarkdown(receipt: Receipt): string {
 }
 function print(value: unknown, format: OutputFormat = "text"): void {
   if (format === "json") return console.log(JSON.stringify(value, null, 2));
+  if (format === "markdown" && isComparisonReport(value))
+    return console.log(renderComparisonMarkdown(value));
   if (format === "markdown" && isReceipt(value))
     return console.log(renderMarkdown(value));
   console.log(typeof value === "string" ? value : renderText(value));
@@ -322,6 +350,28 @@ async function verify(args: string[]): Promise<number> {
   print({ integrity, artifacts: artifactResults }, outputFormat(args));
   return complete ? EXIT.ok : EXIT.incompleteVerification;
 }
+async function compare(args: string[]): Promise<number> {
+  const paths: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === "--format") {
+      index += 1;
+      continue;
+    }
+    if (!args[index].startsWith("--")) paths.push(args[index]);
+  }
+  if (paths.length !== 2)
+    throw new Error("compare requires baseline and current receipt paths.");
+  const result = await compareReceipts(
+    await readJson(paths[0]),
+    await readJson(paths[1])
+  );
+  if (!result.valid) {
+    print({ valid: false, errors: result.errors }, outputFormat(args));
+    return EXIT.verificationFailure;
+  }
+  print(result.report, outputFormat(args));
+  return EXIT.ok;
+}
 async function policyCheck(args: string[]): Promise<number> {
   const receiptPath = args.find(argument => !argument.startsWith("--"));
   const policyPath = argumentValue(args, "--policy");
@@ -348,6 +398,7 @@ async function main(): Promise<number> {
   if (args[0] === "capture") return capture(args.slice(1));
   if (args[0] === "inspect") return inspect(args.slice(1));
   if (args[0] === "verify") return verify(args.slice(1));
+  if (args[0] === "compare") return compare(args.slice(1));
   if (args[0] === "policy" && args[1] === "check")
     return policyCheck(args.slice(2));
   throw new Error(`Unknown command: ${args.join(" ")}`);

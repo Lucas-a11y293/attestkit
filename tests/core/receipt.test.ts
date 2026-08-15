@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareReceipts,
   createReceipt,
   evaluatePolicy,
   verifyReceipt,
@@ -89,5 +90,65 @@ describe("policy evaluation", () => {
       "needs-success",
     ]);
     expect(findings[0].severity).toBe("warning");
+  });
+});
+
+describe("receipt comparison", () => {
+  it("reports an identical pair without executing anything", async () => {
+    const baseline = await createReceipt(payload());
+    const result = await compareReceipts(baseline, structuredClone(baseline));
+    expect(result.valid).toBe(true);
+    expect(result.report?.identical).toBe(true);
+    expect(result.report?.artifacts).toEqual({
+      added: [],
+      removed: [],
+      changed: [],
+      unchanged: ["reports/junit.xml"],
+    });
+  });
+
+  it("summarizes status, source, and artifact changes", async () => {
+    const baseline = await createReceipt(payload());
+    const current = await createReceipt({
+      ...payload(),
+      status: "failed",
+      command: { ...payload().command, argv: ["pnpm", "test"] },
+      source: { ...payload().source, head: "c".repeat(40), dirty: true },
+      artifacts: [
+        {
+          kind: "junit",
+          path: "reports/junit.xml",
+          sha256: "d".repeat(64),
+          sizeBytes: 22,
+        },
+        {
+          kind: "sarif",
+          path: "reports/scan.sarif",
+          sha256: "e".repeat(64),
+          sizeBytes: 30,
+        },
+      ],
+    });
+    const result = await compareReceipts(baseline, current);
+    expect(result.valid).toBe(true);
+    expect(result.report?.status.changed).toBe(true);
+    expect(result.report?.command.changed).toBe(true);
+    expect(result.report?.source.changed).toBe(true);
+    expect(result.report?.artifacts).toEqual({
+      added: ["reports/scan.sarif"],
+      removed: [],
+      changed: ["reports/junit.xml"],
+      unchanged: [],
+    });
+  });
+
+  it("rejects a tampered input before comparing it", async () => {
+    const baseline = await createReceipt(payload());
+    const tampered = structuredClone(baseline);
+    tampered.payload.status = "failed";
+    const result = await compareReceipts(tampered, baseline);
+    expect(result.valid).toBe(false);
+    expect(result.report).toBeNull();
+    expect(result.errors.join(" ")).toContain("baseline:");
   });
 });
