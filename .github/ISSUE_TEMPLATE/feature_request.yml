@@ -1,0 +1,19 @@
+name: Feature request
+description: Propose a focused improvement aligned with AttestKit's evidence-first model.
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the evidence or review problem, not only a preferred implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach and boundaries
+      description: Include protocol compatibility, privacy, and replay-safety considerations.
+    validations:
+      required: true

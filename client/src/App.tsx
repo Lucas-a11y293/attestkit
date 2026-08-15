@@ -1,3 +1,4 @@
+/** Room of Evidence design: the app frames a static, inspectable protocol surface rather than a generic dashboard. */
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -5,7 +6,6 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
-
 
 function Router() {
   return (

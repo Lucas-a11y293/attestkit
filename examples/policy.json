@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "attestkit-policy/v1",
+  "rules": [
+    {
+      "id": "evidence.command-succeeded",
+      "require": "command-succeeded",
+      "severity": "error"
+    },
+    {
+      "id": "evidence.test-artifact",
+      "require": "has-artifact",
+      "severity": "warning",
+      "message": "No hashed test or scan artifact is attached to this receipt."
+    }
+  ]
+}

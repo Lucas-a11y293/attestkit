@@ -1,0 +1,20 @@
+{
+  "$schema": "https://attestkit.dev/schemas/config/v1.json",
+  "workspace": {
+    "root": ".",
+    "followSymlinks": false
+  },
+  "capture": {
+    "maxStdoutBytes": 65536,
+    "maxStderrBytes": 65536,
+    "artifactLimits": {
+      "maxFiles": 20,
+      "maxFileBytes": 2097152
+    }
+  },
+  "redaction": {
+    "profile": "default",
+    "environmentAllowlist": ["CI", "NODE_ENV", "TZ"]
+  },
+  "artifacts": ["reports/**/*.xml", "reports/**/*.sarif"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@attestkit/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "attestkit": "./dist/index.js"
+  },
+  "dependencies": {
+    "@attestkit/core": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc --noEmit -p tsconfig.json"
+  }
+}

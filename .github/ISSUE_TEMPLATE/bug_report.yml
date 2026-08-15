@@ -1,0 +1,33 @@
+name: Bug report
+description: Report an unexpected AttestKit behavior without including secrets.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Thank you for reporting a problem. Please remove tokens, private paths, and proprietary output before submitting."
+  - type: input
+    id: version
+    attributes:
+      label: AttestKit version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Minimal command or API path
+      description: Use placeholder values for secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and sanitized output
+    validations:
+      required: true
