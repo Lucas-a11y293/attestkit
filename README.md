@@ -40,6 +40,14 @@ pnpm cli verify .attestkit/receipt.json --workspace .
 
 The capture command returns exit code `1` if its target command fails, but still writes a receipt where possible. This preserves useful failure evidence without converting a failed test into a malformed protocol document.
 
+Compare two validated runs without rerunning either command:
+
+```bash
+pnpm cli compare baseline.json current.json --format markdown
+```
+
+Comparison verifies both receipt digests first, then reports status, command, source, warning, and artifact additions/removals/changes. It is deliberately an observation of receipt data; it does not inspect source semantics, execute commands, or approve correctness or security.
+
 ## Receipt shape
 
 Receipts use the explicit version `attestkit/v1`. The `integrity.payloadSha256` value is computed from recursively key-sorted canonical JSON of `payload`, making the integrity boundary clear and independently checkable.
@@ -74,7 +82,7 @@ The repository’s [CI workflow](.github/workflows/ci.yml) runs format checks, t
     path: .attestkit/test-receipt.json
 ```
 
-The verifier never runs the captured command. See [docs/github-actions.md](docs/github-actions.md) for permission boundaries and pull-request guidance.
+The verifier never runs the captured command. The comparison command also validates both digests and never replays either command. See [docs/github-actions.md](docs/github-actions.md) for permission boundaries and pull-request guidance.
 
 ## Local browser inspector
 
@@ -86,18 +94,19 @@ pnpm dev
 
 ## Development
 
-| Command                                | Purpose                                                 |
-| -------------------------------------- | ------------------------------------------------------- |
-| `pnpm dev`                             | Run the static inspector locally.                       |
-| `pnpm cli --help`                      | Show CLI commands.                                      |
-| `pnpm test`                            | Run protocol, redaction, path-safety, and runner tests. |
-| `pnpm run check`                       | Check the web app and build both workspace packages.    |
-| `pnpm run build`                       | Build the production web app and CLI packages.          |
-| `pnpm audit --prod --audit-level high` | Audit production dependencies.                          |
+| Command                                       | Purpose                                                 |
+| --------------------------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                                    | Run the static inspector locally.                       |
+| `pnpm cli --help`                             | Show CLI commands.                                      |
+| `pnpm cli compare baseline.json current.json` | Compare two receipts without replay.                    |
+| `pnpm test`                                   | Run protocol, redaction, path-safety, and runner tests. |
+| `pnpm run check`                              | Check the web app and build both workspace packages.    |
+| `pnpm run build`                              | Build the production web app and CLI packages.          |
+| `pnpm audit --prod --audit-level high`        | Audit production dependencies.                          |
 
 ## Roadmap
 
-The MVP focuses on deterministic local receipts. Next candidates include signed receipt envelopes, SARIF/JUnit adapters, GitLab and Forgejo integrations, policy packs, receipt comparison, and an optional self-hosted registry. These are tracked in [ROADMAP.md](ROADMAP.md); none changes the core promise that reviewers keep the final judgment.
+The MVP focuses on deterministic local receipts. The 0.2 line adds receipt comparison while preserving the non-executing boundary. Future candidates include signed receipt envelopes, SARIF/JUnit adapters, GitLab and Forgejo integrations, policy packs, and an optional self-hosted registry. These are tracked in [ROADMAP.md](ROADMAP.md); none changes the core promise that reviewers keep the final judgment.
 
 ## Community and security
 

@@ -8,6 +8,7 @@
 | `inspect`      | Validate structure and render a receipt.                            | No.                                         |
 | `verify`       | Recompute the payload digest; optionally hash local artifact paths. | No.                                         |
 | `policy check` | Evaluate a data-only policy against a valid receipt.                | No.                                         |
+| `compare`      | Compare two integrity-checked receipts and summarize differences.   | No.                                         |
 
 ## `capture`
 
@@ -50,6 +51,14 @@ pnpm cli verify .attestkit/receipt.json --workspace . --format json
 
 Verification does not execute the original command. When `--workspace` is supplied, artifact paths are constrained beneath that canonical root, symlinks are refused, and fresh file digests are compared with the receipt.
 
+## `compare`
+
+```bash
+pnpm cli compare baseline.json current.json --format markdown
+```
+
+`compare` validates the structure and payload digest of both receipts before producing a deterministic report. It summarizes status, command argv, source context, warnings, and artifact additions, removals, and digest changes. It never reads artifact paths from the receipts, reruns captured commands, or makes a correctness/security approval decision. The report uses `attestkit-comparison/v1` independently of the receipt protocol version.
+
 ## `policy check`
 
 ```bash
@@ -66,3 +75,5 @@ Policies are plain JSON data. The MVP supports `command-succeeded`, `has-artifac
 |  `1` | Target command failed, integrity failed, or an error-severity policy finding exists.                        |
 |  `2` | Invalid CLI input, invalid configuration, malformed protocol document, unsafe path, or unreadable artifact. |
 |  `3` | Manifest is valid but a requested local artifact cannot be independently matched.                           |
+
+`compare` returns `1` when either input is malformed or fails integrity verification; it returns `0` only when both inputs are valid and the report is produced. A non-identical report is not itself a failure.
